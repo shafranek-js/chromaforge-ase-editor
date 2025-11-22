@@ -1,0 +1,45 @@
+{
+  "name": "chromaforge-ase-editor",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "main": "electron-main.js",
+  "description": "A professional-grade Adobe Swatch Exchange (ASE) editor.",
+  "author": "ChromaForge",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "dist": "npm run build && electron-builder"
+  },
+  "dependencies": {
+    "colorjs.io": "^0.5.0",
+    "lcms-wasm": "^1.0.1"
+  },
+  "build": {
+    "appId": "com.chromaforge.app",
+    "productName": "ChromaForge",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron-main.js"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "mac": {
+      "target": "dmg"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  },
+  "devDependencies": {
+    "electron": "^30.0.0",
+    "electron-builder": "^24.13.3",
+    "typescript": "^5.2.2",
+    "vite": "^5.2.0"
+  }
+}

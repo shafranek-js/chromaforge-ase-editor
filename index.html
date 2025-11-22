@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChromaForge - ASE Editor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="styles.css">
+<script type="importmap">
+{
+  "imports": {
+    "vite": "https://aistudiocdn.com/vite@^7.2.4",
+    "electron": "https://aistudiocdn.com/electron@^39.2.3",
+    "url": "https://aistudiocdn.com/url@^0.11.4",
+    "path": "https://aistudiocdn.com/path@^0.12.7",
+    "colorjs.io": "https://aistudiocdn.com/colorjs.io@^0.5.2",
+    "module": "https://aistudiocdn.com/module@^2.0.0"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body class="flex flex-col h-screen text-sm overflow-hidden select-none bg-zinc-950 text-zinc-200 antialiased font-sans">
+
+<!-- Header -->
+<header class="h-14 flex items-center justify-between px-4 bg-zinc-900 border-b border-zinc-800 shrink-0 z-30">
+    <!-- Brand -->
+    <div class="flex items-center gap-3 w-48 shrink-0">
+        <div class="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-900/20">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="text-white">
+                <path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"></path>
+            </svg>
+        </div>
+        <div>
+            <h1 class="font-bold text-zinc-100 tracking-tight">ChromaForge</h1>
+            <div class="text-[10px] text-zinc-500 font-medium tracking-wider uppercase">ASE Editor</div>
+        </div>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="flex-1 max-w-md mx-4">
+        <div class="relative group">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg class="h-3.5 w-3.5 text-zinc-500 group-focus-within:text-blue-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+            </div>
+            <input type="text" id="search-input" class="block w-full pl-9 pr-3 py-1.5 bg-zinc-800 border border-zinc-700 rounded-md text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all" placeholder="Search Name or Hex...">
+        </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="flex items-center gap-2 shrink-0">
+        <input type="file" id="file-input" accept=".ase" class="hidden">
+        <input type="file" id="merge-input" accept=".ase" class="hidden">
+        
+        <!-- View Mode Toggles -->
+        <div class="flex items-center bg-zinc-800/50 p-1 rounded-lg border border-zinc-800 gap-0.5">
+             <button id="btn-view-grid" class="p-1.5 text-white bg-zinc-700 rounded transition-all" title="Grid View">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+            </button>
+            <button id="btn-view-list" class="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-700 rounded transition-all" title="List View">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+            </button>
+            <div class="w-px h-4 bg-zinc-700 mx-0.5"></div>
+             <button id="btn-view-contrast" class="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-700 rounded transition-all" title="Toggle Text Contrast Overlay">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="16" fill="currentColor">Aa</text>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Sort Dropdown -->
+        <div class="relative">
+            <select id="sort-select" class="appearance-none bg-zinc-800 border border-zinc-700 hover:border-zinc-600 text-zinc-300 hover:text-white text-xs rounded-md px-3 py-1.5 pr-8 outline-none focus:ring-1 focus:ring-blue-500 transition-all cursor-pointer font-medium">
+                <option value="" disabled selected>Sort By...</option>
+                <option value="name">Sorted by Name (A-Z)</option>
+                <option value="hue">Sorted by Hue (Rainbow)</option>
+                <option value="lightness">Sorted by Lightness (Dark-Light)</option>
+                <option value="saturation">Sorted by Saturation (Vibrant)</option>
+            </select>
+             <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-zinc-500">
+                <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+            </div>
+        </div>
+        
+        <div class="w-px h-6 bg-zinc-800 mx-1"></div>
+
+        <!-- History Actions -->
+        <div class="flex items-center gap-1 bg-zinc-800/50 p-1 rounded-lg border border-zinc-800">
+             <button id="btn-undo" class="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-700 rounded disabled:opacity-30 disabled:hover:bg-transparent" title="Undo (Ctrl+Z)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
+            </button>
+            <button id="btn-redo" class="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-700 rounded disabled:opacity-30 disabled:hover:bg-transparent" title="Redo (Ctrl+Y)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7"/></svg>
+            </button>
+        </div>
+
+        <div class="w-px h-6 bg-zinc-800 mx-1"></div>
+        
+        <!-- File Actions Group -->
+        <div class="flex items-center gap-1 bg-zinc-800/50 p-1 rounded-lg border border-zinc-800">
+            <button id="btn-new" class="flex items-center gap-2 px-3 py-1.5 text-zinc-300 hover:text-white hover:bg-zinc-700 rounded-md transition-colors text-xs font-medium">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                Add New Swatch
+            </button>
+            <button id="btn-open" class="flex items-center gap-2 px-3 py-1.5 text-zinc-300 hover:text-white hover:bg-zinc-700 rounded-md transition-colors text-xs font-medium">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                Import ASE file
+            </button>
+            <button id="btn-save" class="flex items-center gap-2 px-3 py-1.5 text-zinc-300 hover:text-white hover:bg-zinc-700 rounded-md transition-colors text-xs font-medium" title="Export as .ASE (Ctrl+S)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                Export ASE file
+            </button>
+
+            <div class="w-px h-4 bg-zinc-700 mx-1"></div>
+
+            <button id="btn-delete-all" class="flex items-center gap-2 px-3 py-1.5 text-zinc-400 hover:text-red-400 hover:bg-red-900/20 rounded-md transition-colors text-xs font-medium" title="Clear Workspace">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+                Delete all swatches
+            </button>
+        </div>
+
+        <div class="w-px h-6 bg-zinc-800 mx-1"></div>
+
+        <!-- Tools Group -->
+        <div class="flex items-center gap-1">
+            <!-- Batch Operations Dropdown -->
+            <div class="relative">
+                <button id="btn-batch-ops" class="p-2 text-zinc-400 hover:text-amber-400 hover:bg-amber-900/20 rounded-md transition-colors" title="Batch Operations">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path>
+                    </svg>
+                </button>
+                <div id="batch-menu" class="hidden absolute right-0 top-full mt-2 w-64 bg-zinc-900 border border-zinc-800 rounded-lg shadow-2xl z-50 py-1 overflow-hidden ring-1 ring-black ring-opacity-5">
+                    
+                    <div class="px-3 py-2 text-[10px] font-bold text-zinc-500 uppercase tracking-wider bg-zinc-950/50">Color Conversions</div>
+                    
+                    <button data-action="rgb-lab" class="batch-action w-full text-left px-4 py-2 text-xs text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors flex items-center justify-between group">
+                        <span>RGB &rarr; LAB</span>
+                    </button>
+                    <button data-action="lab-rgb" class="batch-action w-full text-left px-4 py-2 text-xs text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors flex items-center justify-between group">
+                        <span>LAB &rarr; RGB</span>
+                    </button>
+                    
+                    <div class="h-px bg-zinc-800 my-1"></div>
+                    
+                    <button data-action="rgb-lab-cmyk" class="batch-action w-full text-left px-4 py-2 text-xs text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors flex items-center justify-between group">
+                        <span>RGB &rarr; CMYK</span>
+                        <span class="text-[10px] text-zinc-600 group-hover:text-zinc-400">via LAB</span>
+                    </button>
+                    <button data-action="cmyk-lab-rgb" class="batch-action w-full text-left px-4 py-2 text-xs text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors flex items-center justify-between group">
+                        <span>CMYK &rarr; RGB</span>
+                        <span class="text-[10px] text-zinc-600 group-hover:text-zinc-400">via LAB</span>
+                    </button>
+                    
+                     <div class="h-px bg-zinc-800 my-1"></div>
+                     
+                    <button data-action="cmyk-lab" class="batch-action w-full text-left px-4 py-2 text-xs text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors flex items-center justify-between group">
+                        <span>CMYK &rarr; LAB</span>
+                    </button>
+                     <button data-action="lab-cmyk" class="batch-action w-full text-left px-4 py-2 text-xs text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors flex items-center justify-between group">
+                        <span>LAB &rarr; CMYK</span>
+                    </button>
+
+                    <div class="px-3 py-2 mt-1 text-[10px] font-bold text-zinc-500 uppercase tracking-wider bg-zinc-950/50 border-t border-zinc-800">Attributes</div>
+                    
+                    <button data-action="process-spot" class="batch-action w-full text-left px-4 py-2 text-xs text-zinc-300 hover:bg-zinc-800 hover:text-amber-400 transition-colors flex items-center gap-2">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle></svg>
+                        Convert to Spot
+                    </button>
+                     <button data-action="set-global" class="batch-action w-full text-left px-4 py-2 text-xs text-zinc-300 hover:bg-zinc-800 hover:text-blue-400 transition-colors flex items-center gap-2">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                        Apply Global
+                    </button>
+                    <button data-action="unset-global" class="batch-action w-full text-left px-4 py-2 text-xs text-zinc-300 hover:bg-zinc-800 hover:text-red-400 transition-colors flex items-center gap-2">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>
+                        Remove Global
+                    </button>
+                </div>
+            </div>
+            
+            <div class="w-px h-6 bg-zinc-800 mx-1"></div>
+
+            <button id="btn-guide" class="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-md transition-colors" title="User Guide & Shortcuts">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+            </button>
+
+            <!-- Settings Dropdown -->
+            <div class="relative">
+                <button id="btn-settings" class="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-md transition-colors" title="Settings">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                    </svg>
+                </button>
+                <div id="settings-menu" class="hidden absolute right-0 top-full mt-2 w-64 bg-zinc-900 border border-zinc-800 rounded-lg shadow-2xl z-50 py-1 overflow-hidden ring-1 ring-black ring-opacity-5">
+                    
+                    <div class="px-3 py-2 text-[10px] font-bold text-zinc-500 uppercase tracking-wider bg-zinc-950/50">Tools</div>
+
+                    <button id="btn-export-css" class="w-full text-left px-4 py-2 text-xs text-zinc-300 hover:bg-zinc-800 hover:text-cyan-400 transition-colors flex items-center gap-2 group">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                        Copy CSS Variables
+                    </button>
+
+                    <button id="btn-merge" class="w-full text-left px-4 py-2 text-xs text-zinc-300 hover:bg-zinc-800 hover:text-purple-400 transition-colors flex items-center gap-2 group">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                        Merge File
+                    </button>
+
+                    <button id="btn-music" class="w-full text-left px-4 py-2 text-xs text-zinc-300 hover:bg-zinc-800 hover:text-pink-400 transition-colors flex items-center gap-2 group">
+                        <span id="icon-music"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle><line x1="4" y1="4" x2="20" y2="20"></line></svg></span>
+                        <span id="text-music">Music: Off</span>
+                    </button>
+
+                    <div class="h-px bg-zinc-800 my-1"></div>
+                    
+                    <button id="btn-hard-reset" class="w-full text-left px-4 py-2 text-xs text-red-400 hover:bg-red-900/20 hover:text-red-300 transition-colors flex items-center gap-2 group">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+                        Reset App State
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- Main Workspace -->
+<div class="flex flex-1 overflow-hidden relative">
+    
+    <!-- Drag Overlay -->
+    <div id="drop-overlay" class="absolute inset-4 z-50 bg-zinc-900/90 border-2 border-dashed border-blue-500 rounded-xl flex flex-col items-center justify-center backdrop-blur-sm opacity-0 pointer-events-none transition-all duration-200">
+        <div class="p-4 bg-blue-500/10 rounded-full mb-4">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-blue-500">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+        </div>
+        <h2 class="text-xl font-bold text-white">Drop .ASE file here</h2>
+        <p class="text-zinc-400 mt-2">Release to load palette</p>
+    </div>
+
+    <!-- Swatch Grid -->
+    <div id="swatch-container" class="flex-1 p-8 overflow-y-auto flex flex-wrap content-start gap-6 bg-black/20">
+        <!-- Default State -->
+        <div class="w-full h-full flex flex-col items-center justify-center text-zinc-600">
+            <div class="w-16 h-16 border-2 border-dashed border-zinc-700 rounded-xl flex items-center justify-center mb-4">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 5v14M5 12h14"/>
+                </svg>
+            </div>
+            <p class="font-medium">No file loaded</p>
+            <p class="text-xs opacity-60 mt-1">Open or Drop an .ASE file</p>
+        </div>
+    </div>
+
+    <!-- Right Sidebar (Persistent) -->
+    <!-- Widened from w-96 to w-[420px] for better slider precision and layout breathing room -->
+    <aside class="w-[420px] bg-zinc-900 border-l border-zinc-800 flex flex-col shrink-0 shadow-xl z-20 transition-all duration-200">
+        
+        <!-- Sidebar: Empty State -->
+        <div id="editor-empty" class="flex-1 flex flex-col items-center justify-center p-8 text-center">
+            <p class="text-zinc-500 text-xs mb-2 uppercase tracking-widest font-bold">Properties</p>
+            <p class="text-zinc-400 text-sm">Select a swatch to edit its properties.</p>
+        </div>
+
+        <!-- Sidebar: Editor Form -->
+        <div id="editor-panel" class="hidden flex-col h-full">
+            
+            <div class="p-6 border-b border-zinc-800">
+                <!-- Large Preview Box with Permanent 'Aa' Overlay -->
+                <div class="w-full h-48 rounded-xl border border-zinc-700/50 shadow-lg overflow-hidden bg-transparency relative group cursor-pointer" title="Click to open OS Color Picker">
+                    <!-- Native Color Input (Hidden) -->
+                    <input type="color" id="native-picker" class="absolute opacity-0 -z-10" >
+                    
+                    <!-- Dynamic Color and Text Overlay -->
+                    <div id="preview-color" class="absolute inset-0 transition-colors duration-200 flex items-center justify-center font-bold text-5xl select-none">
+                        Aa
+                    </div>
+                    
+                    <!-- Hover Icon -->
+                    <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black/30 backdrop-blur-sm transition-all duration-200">
+                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-white"><path d="M12 19l7-7 3 3-7 7-3-3z"></path><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path><path d="M2 2l7.586 7.586"></path><circle cx="11" cy="11" r="2"></circle></svg>
+                    </div>
+                    
+                    <!-- Hex code overlay -->
+                    <div id="preview-hex" class="absolute bottom-3 right-3 bg-black/60 backdrop-blur text-white text-xs px-2 py-1 rounded font-mono opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"></div>
+                    
+                    <!-- Contrast Ratio Display -->
+                    <div id="preview-ratio" class="absolute bottom-3 left-3 bg-black/60 backdrop-blur text-white text-xs px-2 py-1 rounded font-mono opacity-100 shadow-lg" title="Contrast Ratio">--</div>
+                </div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-6 flex flex-col gap-4">
+                
+                <!-- Name Input (Label Removed, Tooltip Added) -->
+                <input type="text" id="edit-name" class="w-full px-3 py-2.5 rounded-md text-zinc-100 placeholder-zinc-600 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-zinc-800/50 border border-zinc-700 transition-all outline-none text-sm font-medium" placeholder="Swatch Name" title="Swatch Name">
+
+                <!-- Attributes Row -->
+                <div class="flex gap-2">
+                    <select id="edit-model" class="flex-1 px-3 py-2 rounded-md text-xs bg-zinc-800/50 border border-zinc-700 text-zinc-200 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none cursor-pointer" title="Color Model">
+                        <option value="RGB ">RGB</option>
+                        <option value="CMYK">CMYK</option>
+                        <option value="Gray">Grayscale</option>
+                        <option value="LAB ">LAB</option>
+                    </select>
+                    
+                    <select id="edit-color-type" class="flex-1 px-3 py-2 rounded-md text-xs bg-zinc-800/50 border border-zinc-700 text-zinc-200 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none cursor-pointer" title="Color Type">
+                        <option value="process">Process Color</option>
+                        <option value="spot">Spot Color</option>
+                    </select>
+                </div>
+                
+                <!-- Global Checkbox Row -->
+                <div class="flex items-center gap-3 px-3 py-2 rounded-md bg-zinc-800/30 border border-zinc-800/50 hover:border-zinc-700/50 transition-colors cursor-pointer" onclick="document.getElementById('edit-global').click()">
+                    <div class="relative flex items-center">
+                        <input type="checkbox" id="edit-global" class="peer h-4 w-4 rounded border-zinc-600 bg-zinc-700 text-blue-600 focus:ring-offset-zinc-900 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                    </div>
+                    <label for="edit-global" class="text-xs text-zinc-400 select-none cursor-pointer flex-1 font-medium">Global Swatch</label>
+                </div>
+
+                <!-- HEX Input Row -->
+                 <div class="relative group">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-500 font-mono text-xs">#</div>
+                    <input type="text" id="edit-hex" class="w-full pl-7 pr-9 py-2 rounded-md text-sm font-mono bg-zinc-800/50 border border-zinc-700 text-zinc-200 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none uppercase tracking-wider" maxlength="6" title="Hex Code">
+                    <button id="btn-copy-hex" class="absolute right-1 top-1 bottom-1 px-2 text-zinc-500 hover:text-white hover:bg-zinc-700 rounded transition-colors" title="Copy HEX">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <hr class="border-zinc-800 my-1" />
+
+                <!-- Channel Sliders (Labels Removed, integrated into row) -->
+                <div class="flex flex-col gap-4" id="value-inputs">
+                    <!-- Dynamic Content Generated by JS -->
+                </div>
+                
+                <!-- Hidden dummy elements for compatibility if JS references them (cleaned up in JS, but keeping layout stable) -->
+                <span id="label-unit" class="hidden"></span>
+                <span id="contrast-white-score" class="hidden"></span>
+                <span id="contrast-white-badge" class="hidden"></span>
+                <span id="contrast-black-score" class="hidden"></span>
+                <span id="contrast-black-badge" class="hidden"></span>
+
+            </div>
+
+            <!-- Actions Footer -->
+            <div class="p-5 border-t border-zinc-800 bg-zinc-900/50">
+                <div class="flex gap-2">
+                    <button id="btn-delete" class="flex-1 px-3 py-2.5 bg-zinc-800 hover:bg-red-900/30 text-zinc-400 hover:text-red-400 border border-zinc-700 hover:border-red-900/50 rounded-md transition-all text-xs font-semibold uppercase tracking-wide">
+                        Delete
+                    </button>
+                    <button id="btn-duplicate" class="px-3 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white border border-zinc-700 rounded-md transition-all text-xs font-semibold uppercase tracking-wide" title="Duplicate Swatch">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    </button>
+                    <button id="btn-apply" class="flex-[2] px-3 py-2.5 bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/20 rounded-md transition-all text-xs font-semibold uppercase tracking-wide">
+                        Apply
+                    </button>
+                </div>
+            </div>
+        </div>
+    </aside>
+</div>
+
+<div id="toast" class="fixed bottom-6 right-6 px-4 py-3 rounded-lg shadow-xl border flex items-center gap-3 z-50 text-sm font-medium transition-all duration-300 translate-y-full opacity-0">
+    <span id="toast-msg">Message</span>
+</div>
+
+<!-- Guide Modal -->
+<div id="guide-modal" class="fixed inset-0 z-[100] hidden items-center justify-center p-4">
+    <!-- Backdrop -->
+    <div id="guide-backdrop" class="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity opacity-0"></div>
+    
+    <!-- Modal Content -->
+    <div id="guide-content" class="relative bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col transform scale-95 opacity-0 transition-all duration-200">
+        <!-- Header -->
+        <div class="flex items-center justify-between p-5 border-b border-zinc-800 shrink-0">
+            <div class="flex items-center gap-3">
+                <div class="bg-zinc-800 p-2 rounded-lg">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-zinc-200"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                </div>
+                <div>
+                    <h2 class="text-xl font-bold text-white">User Guide</h2>
+                    <p class="text-sm text-zinc-500">ChromaForge ASE Editor</p>
+                </div>
+            </div>
+            <button id="btn-close-guide" class="text-zinc-500 hover:text-white transition-colors p-1">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>
+
+        <!-- Body -->
+        <div class="overflow-y-auto p-6 space-y-8">
+            
+            <!-- Section 1: File & Batch Ops -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- New -->
+                <div class="space-y-2">
+                    <div class="flex items-center gap-2 text-white font-semibold text-base">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        Add New Swatch
+                    </div>
+                    <p class="text-sm text-zinc-400 leading-relaxed">
+                        Click <strong>Add New Swatch</strong> to create a fresh swatch. Great for building palettes from scratch without importing a file.
+                    </p>
+                </div>
+                <!-- Open -->
+                <div class="space-y-2">
+                    <div class="flex items-center gap-2 text-blue-400 font-semibold text-base">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                        Import ASE File
+                    </div>
+                    <p class="text-sm text-zinc-400 leading-relaxed">
+                        Click <strong>Import ASE File</strong> or simply drag and drop an <code>.ase</code> file onto the window. The editor parses RGB, CMYK, LAB, and Grayscale swatches.
+                    </p>
+                </div>
+                <!-- Save -->
+                <div class="space-y-2">
+                    <div class="flex items-center gap-2 text-emerald-400 font-semibold text-base">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                        Save
+                    </div>
+                    <p class="text-sm text-zinc-400 leading-relaxed">
+                        Downloads the current state as a valid Adobe Swatch Exchange file.
+                    </p>
+                </div>
+                 <!-- Merge -->
+                <div class="space-y-2">
+                    <div class="flex items-center gap-2 text-purple-400 font-semibold text-base">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                        Merge
+                    </div>
+                    <p class="text-sm text-zinc-400 leading-relaxed">
+                        Use the <strong>Merge</strong> button in Settings to add colors from another file into your current palette. Only unique colors (by name) are added.
+                    </p>
+                </div>
+                <!-- Process to Spot (New) -->
+                <div class="space-y-2">
+                    <div class="flex items-center gap-2 text-amber-400 font-semibold text-base">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path></svg>
+                        Batch Operations
+                    </div>
+                    <p class="text-sm text-zinc-400 leading-relaxed">
+                         Access the batch menu to perform mass conversions (e.g., RGB to LAB, Process to Spot) or bulk update attributes like Global status.
+                    </p>
+                </div>
+                <!-- History Controls -->
+                <div class="space-y-2">
+                    <div class="flex items-center gap-2 text-zinc-300 font-semibold text-base">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
+                        History Controls
+                    </div>
+                    <p class="text-sm text-zinc-400 leading-relaxed">
+                        Use the <strong>Undo</strong> and <strong>Redo</strong> arrow buttons in the toolbar (or shortcuts) to navigate your editing history.
+                    </p>
+                </div>
+            </div>
+
+            <hr class="border-zinc-800" />
+
+            <!-- Section 2: Editing -->
+            <div class="space-y-4">
+                <h3 class="text-base font-bold text-zinc-200 uppercase tracking-wider">Editing & Tools</h3>
+                <div class="bg-zinc-800/30 p-4 rounded-lg border border-zinc-800">
+                    <h4 class="font-semibold text-zinc-300 mb-2 text-sm">Properties Panel</h4>
+                    <p class="text-sm text-zinc-400 mb-4">
+                        Select a swatch to edit its properties. You can modify the <strong>Name</strong>, <strong>Color Model</strong> (converts automatically), and <strong>Channel Values</strong>.
+                    </p>
+                    
+                    <h4 class="font-semibold text-zinc-300 mb-2 text-sm pt-2 border-t border-zinc-800/50">Accessibility Check</h4>
+                    <p class="text-sm text-zinc-400 mb-3">
+                         The sidebar automatically calculates <strong>Contrast Ratios</strong>. The "Aa" text in the preview box will automatically adjust to White or Black to demonstrate maximum legibility.
+                    </p>
+                    
+                    <h4 class="font-semibold text-zinc-300 mb-2 text-sm pt-2 border-t border-zinc-800/50">Contrast Overlay</h4>
+                    <p class="text-sm text-zinc-400 mb-3">
+                         Toggle the <strong>Aa</strong> button in the toolbar to overlay text on all swatches. The text color (White/Black) is automatically selected for maximum readability.
+                    </p>
+
+                    <div class="mt-2 text-xs text-zinc-500 bg-zinc-900 p-3 rounded border border-zinc-800/50">
+                        <strong>Pro Tip:</strong> Click the large color preview box to open your system's visual color picker.
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Section 3: View & Sort -->
+             <div class="space-y-4">
+                <h3 class="text-base font-bold text-zinc-200 uppercase tracking-wider">Organization</h3>
+                <ul class="text-sm text-zinc-400 space-y-3 list-disc list-inside">
+                    <li><strong>Search:</strong> Filter the swatch view instantly by typing a Name or Hex code in the top search bar.</li>
+                    <li><strong>View Modes:</strong> Toggle between <span class="text-zinc-300">Grid View</span> (visual focus) and <span class="text-zinc-300">List View</span> (detailed data).</li>
+                    <li><strong>Sorting:</strong> Sort your palette by Name, Hue, Saturation, or Lightness via the dropdown. Note: Sorting is non-destructive and preserves groups.</li>
+                    <li><strong>Drag & Drop:</strong> Reorder swatches by dragging them within the grid or list.</li>
+                    <li><strong>Duplicate Copy:</strong> Hold <span class="text-zinc-200 font-mono bg-zinc-800 px-1.5 py-0.5 rounded text-xs border border-zinc-700">Alt</span> (Option) while dragging a swatch to create a copy at the drop location.</li>
+                    <li><strong>CSS Export:</strong> Found in the Settings menu (Gear Icon). Copies all colors to your clipboard as CSS Custom Properties (`:root`).</li>
+                </ul>
+            </div>
+
+            <hr class="border-zinc-800" />
+
+            <!-- Section 4: Shortcuts -->
+            <div>
+                <h3 class="text-base font-bold text-zinc-200 uppercase tracking-wider mb-4">Keyboard Shortcuts</h3>
+                <div class="grid grid-cols-2 gap-y-4 gap-x-8">
+                    <div class="flex justify-between items-center border-b border-zinc-800 pb-2">
+                        <span class="text-sm text-zinc-400">Undo</span>
+                        <span class="text-xs font-mono bg-zinc-800 px-2 py-1 rounded text-zinc-300 border border-zinc-700">Ctrl + Z</span>
+                    </div>
+                    <div class="flex justify-between items-center border-b border-zinc-800 pb-2">
+                        <span class="text-sm text-zinc-400">Redo</span>
+                        <span class="text-xs font-mono bg-zinc-800 px-2 py-1 rounded text-zinc-300 border border-zinc-700">Ctrl + Y</span>
+                    </div>
+                    <div class="flex justify-between items-center border-b border-zinc-800 pb-2">
+                        <span class="text-sm text-zinc-400">Save File</span>
+                        <span class="text-xs font-mono bg-zinc-800 px-2 py-1 rounded text-zinc-300 border border-zinc-700">Ctrl + S</span>
+                    </div>
+                    <div class="flex justify-between items-center border-b border-zinc-800 pb-2">
+                        <span class="text-sm text-zinc-400">Delete Swatch</span>
+                        <span class="text-xs font-mono bg-zinc-800 px-2 py-1 rounded text-zinc-300 border border-zinc-700">Del / Backspace</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        
+        <!-- Footer -->
+        <div class="p-5 border-t border-zinc-800 bg-zinc-900/50 rounded-b-xl flex justify-end">
+            <button id="btn-close-guide-footer" class="px-5 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white text-sm font-medium rounded-md transition-colors">
+                Close Guide
+            </button>
+        </div>
+    </div>
+</div>
+
+<audio id="bg-audio" loop></audio>
+
+<script type="module" src="index.tsx"></script>
+
+<script type="module" src="/index.tsx"></script>
+</body>
+</html>
